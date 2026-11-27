@@ -19,7 +19,7 @@ import EmployeeDetailsModal from "../components/EmployeeDetailsModal";
 import ProjectDetailsModal from "../components/ProjectDetailsModal";
 // "http://localhost:4000"
 const API_URL = (
-    import.meta.env.VITE_API_URL ||"https://hrm.stackenzo.com"
+    import.meta.env.VITE_API_URL ||"https://hrmbackend.stackenzo.com"
 ).replace(/\/$/, "");
 
 const STATUS_OPTIONS = [

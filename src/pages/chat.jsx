@@ -17,7 +17,7 @@ import {
 import { chatAuth, chatDatabase } from "../config/firebase";
 //"http://localhost:4000"
 const API_URL = (
-    import.meta.env.VITE_API_URL || "https://hrm.stackenzo.com"
+    import.meta.env.VITE_API_URL || "https://hrmbackend.stackenzo.com"
 ).replace(/\/$/, "");
 
 // -----------------------------------------
