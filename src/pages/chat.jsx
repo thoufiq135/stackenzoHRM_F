@@ -1,4 +1,3 @@
-
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { signInWithCustomToken } from "firebase/auth";
@@ -83,6 +82,10 @@ function Chat() {
     const [conversations, setConversations] = useState([]);
     const [visibleConversations, setVisibleConversations] = useState(null);
     const [selectedConversation, setSelectedConversation] = useState(null);
+
+    // MOBILE: which pane is showing ("list" | "chat").
+    // On md+ screens both panes are always visible.
+    const [mobileView, setMobileView] = useState("list");
 
     // -----------------------------------------
     // MESSAGE STATES
@@ -404,6 +407,7 @@ function Chat() {
 
             if (createdConversation) {
                 setSelectedConversation(createdConversation);
+                setMobileView("chat");
             }
 
             closeNewConversation();
@@ -474,6 +478,7 @@ function Chat() {
 
             if (createdConversation) {
                 setSelectedConversation(createdConversation);
+                setMobileView("chat");
             }
 
             closeNewConversation();
@@ -588,13 +593,15 @@ function Chat() {
 
     // -----------------------------------------
     // AUTO SCROLL
+    // (mobileView is a dependency because the chat pane is
+    //  display:none on phones until a conversation is opened)
     // -----------------------------------------
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({
             behavior: "smooth"
         });
-    }, [messages]);
+    }, [messages, mobileView]);
 
     // -----------------------------------------
     // SEND MESSAGE
@@ -677,6 +684,7 @@ function Chat() {
     const selectConversation = (conversation) => {
         setChatError("");
         setSelectedConversation(conversation);
+        setMobileView("chat");
     };
 
     // -----------------------------------------
@@ -717,24 +725,35 @@ function Chat() {
     // UI
     // -----------------------------------------
 
+    const inChatOnMobile = mobileView === "chat";
+
     return (
-        <div className="h-screen bg-slate-100 flex flex-col">
+        <div
+            className="h-screen bg-slate-100 flex flex-col overflow-hidden"
+            style={{ height: "100dvh" }}
+        >
 
-            {/* HEADER */}
+            {/* HEADER — hidden on phones while a conversation is open
+                (the chat pane has its own header with a back button) */}
 
-            <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-5 shrink-0">
+            <header
+                className={`h-14 md:h-16 bg-white border-b border-slate-200 items-center justify-between px-4 md:px-5 shrink-0 ${
+                    inChatOnMobile ? "hidden md:flex" : "flex"
+                }`}
+                style={{ paddingTop: "env(safe-area-inset-top)" }}
+            >
 
-                <div>
-                    <h1 className="text-lg font-bold text-slate-900">
+                <div className="min-w-0">
+                    <h1 className="text-base md:text-lg font-bold text-slate-900 truncate">
                         Stackenzo Chat
                     </h1>
 
-                    <p className="text-xs text-slate-500">
+                    <p className="hidden sm:block text-xs text-slate-500">
                         HRM Workspace Messaging
                     </p>
                 </div>
 
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2 md:gap-4 shrink-0">
 
                     <div className="flex items-center gap-2 text-xs">
                         <span
@@ -752,9 +771,10 @@ function Chat() {
 
                     <button
                         onClick={fetchConversations}
-                        className="px-3 py-2 rounded-lg border border-slate-200 text-sm hover:bg-slate-50"
+                        aria-label="Refresh conversations"
+                        className="h-10 min-w-10 px-3 rounded-lg border border-slate-200 text-sm hover:bg-slate-50 active:bg-slate-100"
                     >
-                        ↻ Refresh
+                        ↻<span className="hidden sm:inline"> Refresh</span>
                     </button>
 
                 </div>
@@ -764,11 +784,15 @@ function Chat() {
 
             <div className="flex-1 min-h-0 flex overflow-hidden">
 
-                {/* SIDEBAR */}
+                {/* SIDEBAR — full width on phones, fixed width on md+ */}
 
-                <aside className="w-80 bg-white border-r border-slate-200 flex flex-col shrink-0">
+                <aside
+                    className={`${
+                        inChatOnMobile ? "hidden" : "flex"
+                    } md:flex w-full md:w-80 bg-white md:border-r border-slate-200 flex-col shrink-0 min-h-0`}
+                >
 
-                    <div className="p-5 border-b border-slate-100">
+                    <div className="p-4 md:p-5 border-b border-slate-100">
 
                         <div className="flex items-center justify-between">
 
@@ -778,8 +802,9 @@ function Chat() {
 
                             <button
                                 onClick={openNewConversation}
-                                className="w-9 h-9 rounded-lg bg-blue-600 text-white text-xl hover:bg-blue-700 flex items-center justify-center"
+                                className="w-10 h-10 md:w-9 md:h-9 rounded-lg bg-blue-600 text-white text-xl hover:bg-blue-700 active:bg-blue-800 flex items-center justify-center"
                                 title="New conversation"
+                                aria-label="New conversation"
                             >
                                 +
                             </button>
@@ -789,7 +814,7 @@ function Chat() {
                         <input
                             type="text"
                             placeholder="Search conversations..."
-                            className="mt-4 w-full px-3 py-2.5 text-sm border border-slate-200 rounded-lg outline-none focus:border-blue-500"
+                            className="mt-4 w-full px-3 py-2.5 text-base md:text-sm border border-slate-200 rounded-lg outline-none focus:border-blue-500"
                             onChange={(event) =>
                                 filterConversations(event.target.value)
                             }
@@ -797,7 +822,7 @@ function Chat() {
 
                     </div>
 
-                    <div className="flex-1 overflow-y-auto">
+                    <div className="flex-1 overflow-y-auto overscroll-contain">
 
                         {loading ? (
                             <div className="p-6 text-center text-sm text-slate-400">
@@ -821,7 +846,7 @@ function Chat() {
 
                                 <button
                                     onClick={openNewConversation}
-                                    className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm"
+                                    className="mt-4 px-4 py-2.5 bg-blue-600 text-white rounded-lg text-sm"
                                 >
                                     New Conversation
                                 </button>
@@ -832,6 +857,8 @@ function Chat() {
                             (visibleConversations ?? conversations).map(conversation => {
                                 const id = getConversationId(conversation);
 
+                                // Highlight only on desktop; on phones the list
+                                // is a plain navigation list.
                                 const selected =
                                     getConversationId(selectedConversation) === id;
 
@@ -841,9 +868,9 @@ function Chat() {
                                         onClick={() =>
                                             selectConversation(conversation)
                                         }
-                                        className={`w-full text-left p-4 border-b border-slate-100 hover:bg-slate-50 transition ${
+                                        className={`w-full text-left p-4 border-b border-slate-100 hover:bg-slate-50 active:bg-slate-100 transition ${
                                             selected
-                                                ? "bg-blue-50 border-l-4 border-l-blue-600"
+                                                ? "md:bg-blue-50 md:border-l-4 md:border-l-blue-600"
                                                 : ""
                                         }`}
                                     >
@@ -887,31 +914,64 @@ function Chat() {
 
                     </div>
 
+                    {/* Errors in list view (phones can't see the chat banner) */}
+                    {chatError && !showNewConversation && !inChatOnMobile && (
+                        <div className="md:hidden m-3 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs">
+                            {chatError}
+                        </div>
+                    )}
+
                 </aside>
 
-                {/* CHAT AREA */}
+                {/* CHAT AREA — hidden on phones until a conversation is opened */}
 
-                <main className="flex-1 min-w-0 flex flex-col bg-slate-50">
+                <main
+                    className={`${
+                        inChatOnMobile ? "flex" : "hidden"
+                    } md:flex flex-1 min-w-0 min-h-0 flex-col bg-slate-50`}
+                >
 
                     {selectedConversation ? (
                         <>
 
                             {/* CHAT HEADER */}
 
-                            <div className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between shrink-0">
+                            <div
+                                className="min-h-14 md:h-16 bg-white border-b border-slate-200 px-2 md:px-6 flex items-center justify-between gap-2 shrink-0"
+                                style={{ paddingTop: "env(safe-area-inset-top)" }}
+                            >
 
-                                <div>
-                                    <h2 className="font-semibold text-slate-900">
-                                        {getConversationName(selectedConversation)}
-                                    </h2>
+                                <div className="flex items-center gap-1 md:gap-0 min-w-0">
 
-                                    <p className="text-xs text-slate-400 mt-1">
-                                        {selectedConversation.conversation_type}
-                                    </p>
+                                    {/* Back button (phones only) */}
+                                    <button
+                                        onClick={() => setMobileView("list")}
+                                        aria-label="Back to conversations"
+                                        className="md:hidden w-10 h-10 shrink-0 rounded-full flex items-center justify-center text-xl text-slate-700 hover:bg-slate-100 active:bg-slate-200"
+                                    >
+                                        ←
+                                    </button>
+
+                                    <div className="w-9 h-9 md:hidden rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-semibold shrink-0 mr-2">
+                                        {getConversationName(selectedConversation)
+                                            .charAt(0)
+                                            .toUpperCase()}
+                                    </div>
+
+                                    <div className="min-w-0">
+                                        <h2 className="font-semibold text-slate-900 truncate">
+                                            {getConversationName(selectedConversation)}
+                                        </h2>
+
+                                        <p className="text-xs text-slate-400 mt-0.5 md:mt-1">
+                                            {selectedConversation.conversation_type}
+                                        </p>
+                                    </div>
+
                                 </div>
 
-                                <span className="text-xs text-emerald-600">
-                                    ● Live conversation
+                                <span className="text-xs text-emerald-600 shrink-0 pr-2 md:pr-0">
+                                    ●<span className="hidden sm:inline"> Live conversation</span>
                                 </span>
 
                             </div>
@@ -919,14 +979,14 @@ function Chat() {
                             {/* ERROR */}
 
                             {chatError && (
-                                <div className="mx-5 mt-3 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs">
+                                <div className="mx-3 md:mx-5 mt-3 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs">
                                     {chatError}
                                 </div>
                             )}
 
                             {/* MESSAGES */}
 
-                            <div className="flex-1 overflow-y-auto p-5 md:p-8">
+                            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-3 md:p-8">
 
                                 {messagesLoading ? (
                                     <div className="text-center text-sm text-slate-400 mt-10">
@@ -955,7 +1015,7 @@ function Chat() {
                                     </div>
 
                                 ) : (
-                                    <div className="space-y-4 max-w-4xl mx-auto">
+                                    <div className="space-y-3 md:space-y-4 max-w-4xl mx-auto">
 
                                         {messages.map(message => {
                                             const isMine =
@@ -972,7 +1032,7 @@ function Chat() {
                                                 >
 
                                                     <div
-                                                        className={`max-w-[75%] rounded-2xl px-4 py-3 shadow-sm ${
+                                                        className={`max-w-[85%] md:max-w-[75%] rounded-2xl px-3.5 py-2.5 md:px-4 md:py-3 shadow-sm ${
                                                             isMine
                                                                 ? "bg-blue-600 text-white rounded-br-sm"
                                                                 : "bg-white text-slate-800 border border-slate-200 rounded-bl-sm"
@@ -985,12 +1045,12 @@ function Chat() {
                                                             </p>
                                                         )}
 
-                                                        <p className="text-sm whitespace-pre-wrap break-words">
+                                                        <p className="text-sm whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
                                                             {message.text}
                                                         </p>
 
                                                         <p
-                                                            className={`text-[10px] mt-2 text-right ${
+                                                            className={`text-[10px] mt-1.5 md:mt-2 text-right ${
                                                                 isMine
                                                                     ? "text-blue-100"
                                                                     : "text-slate-400"
@@ -1016,11 +1076,16 @@ function Chat() {
 
                             <form
                                 onSubmit={sendMessage}
-                                className="p-4 md:p-5 bg-white border-t border-slate-200 shrink-0"
+                                className="px-3 pt-3 md:p-5 bg-white border-t border-slate-200 shrink-0"
+                                style={{
+                                    paddingBottom:
+                                        "max(0.75rem, env(safe-area-inset-bottom))"
+                                }}
                             >
 
-                                <div className="max-w-4xl mx-auto flex items-end gap-3">
+                                <div className="max-w-4xl mx-auto flex items-end gap-2 md:gap-3">
 
+                                    {/* text-base on phones prevents iOS auto-zoom on focus */}
                                     <textarea
                                         value={messageText}
                                         onChange={(event) =>
@@ -1030,20 +1095,27 @@ function Chat() {
                                         placeholder="Type your message..."
                                         rows={1}
                                         maxLength={5000}
-                                        className="flex-1 resize-none min-h-12 max-h-32 px-4 py-3 border border-slate-200 rounded-xl outline-none focus:border-blue-500 text-sm"
+                                        className="flex-1 min-w-0 resize-none min-h-11 md:min-h-12 max-h-32 px-4 py-2.5 md:py-3 border border-slate-200 rounded-xl outline-none focus:border-blue-500 text-base md:text-sm"
                                     />
 
                                     <button
                                         type="submit"
                                         disabled={!messageText.trim() || sending}
-                                        className="h-12 px-6 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed"
+                                        aria-label="Send message"
+                                        className="h-11 md:h-12 min-w-11 px-3 md:px-6 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 active:bg-blue-800 disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
                                     >
-                                        {sending ? "Sending..." : "Send ➤"}
+                                        <span className="md:hidden">
+                                            {sending ? "…" : "➤"}
+                                        </span>
+
+                                        <span className="hidden md:inline">
+                                            {sending ? "Sending..." : "Send ➤"}
+                                        </span>
                                     </button>
 
                                 </div>
 
-                                <p className="max-w-4xl mx-auto text-[10px] text-slate-400 mt-2">
+                                <p className="hidden md:block max-w-4xl mx-auto text-[10px] text-slate-400 mt-2">
                                     Press Enter to send · Shift + Enter for a new line
                                 </p>
 
@@ -1053,7 +1125,7 @@ function Chat() {
 
                     ) : (
 
-                        <div className="flex-1 flex items-center justify-center">
+                        <div className="flex-1 flex items-center justify-center p-6">
 
                             <div className="text-center">
 
@@ -1081,17 +1153,21 @@ function Chat() {
 
             {/* ---------------------------------
                 NEW CONVERSATION MODAL
+                (bottom sheet on phones, centered dialog on md+)
             --------------------------------- */}
 
             {showNewConversation && (
 
-                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+                <div className="fixed inset-0 z-50 bg-black/40 flex items-end md:items-center justify-center md:p-4">
 
-                    <div className="bg-white w-full max-w-lg rounded-2xl shadow-xl overflow-hidden">
+                    <div
+                        className="bg-white w-full md:max-w-lg rounded-t-2xl md:rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[92dvh] md:max-h-[90vh]"
+                        style={{ maxHeight: "min(92dvh, 720px)" }}
+                    >
 
                         {/* MODAL HEADER */}
 
-                        <div className="p-5 border-b border-slate-100 flex justify-between items-center">
+                        <div className="p-4 md:p-5 border-b border-slate-100 flex justify-between items-center shrink-0">
 
                             <div>
                                 <h2 className="font-bold text-lg text-slate-900">
@@ -1106,7 +1182,8 @@ function Chat() {
                             <button
                                 onClick={closeNewConversation}
                                 disabled={creatingConversation}
-                                className="text-2xl text-slate-400 hover:text-slate-800 disabled:opacity-40"
+                                aria-label="Close"
+                                className="w-10 h-10 flex items-center justify-center text-2xl text-slate-400 hover:text-slate-800 disabled:opacity-40"
                             >
                                 ×
                             </button>
@@ -1115,7 +1192,7 @@ function Chat() {
 
                         {/* TABS */}
 
-                        <div className="flex border-b border-slate-100">
+                        <div className="flex border-b border-slate-100 shrink-0">
 
                             <button
                                 onClick={() => {
@@ -1149,7 +1226,7 @@ function Chat() {
 
                         </div>
 
-                        <div className="p-5 space-y-4 max-h-[65vh] overflow-y-auto">
+                        <div className="p-4 md:p-5 space-y-4 flex-1 min-h-0 overflow-y-auto overscroll-contain">
 
                             {/* GROUP DETAILS */}
 
@@ -1167,7 +1244,7 @@ function Chat() {
                                                 setGroupName(e.target.value)
                                             }
                                             placeholder="Enter group name"
-                                            className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-500"
+                                            className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-base md:text-sm outline-none focus:border-blue-500"
                                         />
                                     </div>
 
@@ -1183,7 +1260,7 @@ function Chat() {
                                             }
                                             placeholder="What is this group about?"
                                             rows={2}
-                                            className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-500 resize-none"
+                                            className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-base md:text-sm outline-none focus:border-blue-500 resize-none"
                                         />
                                     </div>
 
@@ -1204,8 +1281,8 @@ function Chat() {
                                     onChange={(e) =>
                                         searchEmployees(e.target.value)
                                     }
-                                    placeholder="Search by name, employee code or email..."
-                                    className="w-full px-3 py-3 border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-500"
+                                    placeholder="Search by name, code or email..."
+                                    className="w-full px-3 py-3 border border-slate-200 rounded-lg text-base md:text-sm outline-none focus:border-blue-500"
                                 />
                             </div>
 
@@ -1221,7 +1298,7 @@ function Chat() {
                                             <button
                                                 key={member.id}
                                                 onClick={() => toggleMember(member)}
-                                                className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full text-xs"
+                                                className="px-3 py-2 bg-blue-50 text-blue-700 rounded-full text-xs"
                                             >
                                                 {member.full_name} ×
                                             </button>
@@ -1271,11 +1348,7 @@ function Chat() {
 
                                         <button
                                             key={employee.id}
-                                            disabled={
-                                                creatingConversation ||
-                                                (conversationMode === "DIRECT" &&
-                                                    creatingConversation)
-                                            }
+                                            disabled={creatingConversation}
                                             onClick={() => {
                                                 if (conversationMode === "DIRECT") {
                                                     createDirectConversation(employee);
@@ -1286,11 +1359,11 @@ function Chat() {
                                             className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left transition ${
                                                 selected
                                                     ? "bg-blue-50 border-blue-300"
-                                                    : "border-slate-100 hover:bg-slate-50"
+                                                    : "border-slate-100 hover:bg-slate-50 active:bg-slate-100"
                                             }`}
                                         >
 
-                                            <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center font-semibold">
+                                            <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center font-semibold shrink-0">
                                                 {employee.full_name
                                                     ?.charAt(0)
                                                     ?.toUpperCase() || "U"}
@@ -1298,11 +1371,11 @@ function Chat() {
 
                                             <div className="flex-1 min-w-0">
 
-                                                <p className="text-sm font-semibold text-slate-800">
+                                                <p className="text-sm font-semibold text-slate-800 truncate">
                                                     {employee.full_name}
                                                 </p>
 
-                                                <p className="text-xs text-slate-400 mt-1">
+                                                <p className="text-xs text-slate-400 mt-1 truncate">
                                                     {employee.employee_code || employee.email}
                                                     {" · "}
                                                     {employee.role || "Employee"}
@@ -1313,7 +1386,7 @@ function Chat() {
                                             {conversationMode === "GROUP" && (
 
                                                 <span
-                                                    className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${
+                                                    className={`w-6 h-6 rounded-full flex items-center justify-center text-xs shrink-0 ${
                                                         selected
                                                             ? "bg-blue-600 text-white"
                                                             : "border border-slate-300"
@@ -1347,10 +1420,16 @@ function Chat() {
 
                         {conversationMode === "GROUP" && (
 
-                            <div className="p-5 border-t border-slate-100 flex justify-between items-center">
+                            <div
+                                className="p-4 md:p-5 border-t border-slate-100 flex justify-between items-center gap-3 shrink-0"
+                                style={{
+                                    paddingBottom:
+                                        "max(1rem, env(safe-area-inset-bottom))"
+                                }}
+                            >
 
                                 <span className="text-xs text-slate-500">
-                                    {selectedMembers.length} members selected
+                                    {selectedMembers.length} selected
                                 </span>
 
                                 <button
@@ -1360,7 +1439,7 @@ function Chat() {
                                         selectedMembers.length === 0
                                     }
                                     onClick={createGroupConversation}
-                                    className="px-5 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium disabled:opacity-40"
+                                    className="px-5 py-3 md:py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium disabled:opacity-40"
                                 >
                                     {creatingConversation
                                         ? "Creating..."
@@ -1383,19 +1462,22 @@ function Chat() {
 
             {authError && (
 
-                <div className="fixed bottom-5 right-5 max-w-md bg-red-600 text-white p-4 rounded-xl shadow-xl text-sm">
+                <div
+                    className="fixed z-[60] left-3 right-3 bottom-3 md:left-auto md:right-5 md:bottom-5 md:max-w-md bg-red-600 text-white p-4 rounded-xl shadow-xl text-sm"
+                    style={{ marginBottom: "env(safe-area-inset-bottom)" }}
+                >
 
                     <p className="font-semibold">
                         Firebase connection failed
                     </p>
 
-                    <p className="mt-1">
+                    <p className="mt-1 break-words">
                         {authError}
                     </p>
 
                     <button
                         onClick={authenticateFirebase}
-                        className="mt-3 underline"
+                        className="mt-3 underline py-1"
                     >
                         Retry
                     </button>
