@@ -6,6 +6,7 @@ import Dashboard from './dashboard.jsx'
 import TaskManagement from './TaskManagement'
 import ProjectDetails from './ProjectDetails'
 import Projects from './projects'
+import Chat from './pages/chat.jsx'
 function App() {
   const [count, setCount] = useState(0)
 
@@ -17,6 +18,7 @@ function App() {
     <Route path='/tasks' element={<TaskManagement/>}/>
     <Route path="/projects/:projectId" element={<ProjectDetails/>}/>
     <Route path="/projects" element={<Projects/>}/>
+    <Route path="/chat" element={<Chat />} />
 
    </Routes>
   </BrowserRouter>
